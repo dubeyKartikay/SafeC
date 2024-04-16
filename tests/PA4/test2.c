@@ -8,7 +8,8 @@ struct List {
 };
 
 void __attribute__((noinline)) bar(int *arr, int offset) {
-	arr[offset] = 0;
+  unsigned long long * arrl = (unsigned long long *)arr;
+	arrl[offset] = 0;
 }
 
 void __attribute__((noinline)) foo(struct List *node, int offset) {

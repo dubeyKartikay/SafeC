@@ -23,6 +23,25 @@ dummy:
 	$(LLC) $*.bc -o $*.s
 	$(CLANG) -g -O3 -L$(SAFEGC) -Wl,-rpath=$(SAFEGC) -o $@ $*.s -lmemory
 
+one:test1.c dummy
+	$(CLANG) -I$(SAFEGC) -O3 -c -emit-llvm $<
+	$(DIS) test1.bc
+	$(OPT) -load $(SLIB) -f -memsafe -o test1.bc < test1.bc
+	$(OPT) -load $(SLIB) -f -typeassigner -o test1.bc < test1.bc
+	$(DIS) -o test1_opt.ll test1.bc
+	$(LLC) test1.bc -o test1.s
+	$(CLANG) -g -O3 -L$(SAFEGC) -Wl,-rpath=$(SAFEGC) -o $@ test1.s -lmemory
+
+two:test2.c dummy
+	$(CLANG) -I$(SAFEGC) -O3 -c -emit-llvm $<
+	$(DIS) test2.bc
+	$(OPT) -load $(SLIB) -f -memsafe -o test2.bc < test2.bc
+	$(OPT) -load $(SLIB) -f -typeassigner -o test2.bc < test2.bc
+	$(DIS) -o test2_opt.ll test2.bc
+	$(LLC) test2.bc -o test2.s
+	$(CLANG) -g -O3 -L$(SAFEGC) -Wl,-rpath=$(SAFEGC) -o $@ test2.s -lmemory
+
+
 run1:
 	./test1 20 2
 	./test1 20 5

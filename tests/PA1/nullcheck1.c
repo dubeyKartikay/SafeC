@@ -5,8 +5,10 @@ void foo (int *arr)
 {
 	int *ptr = mymalloc(4);
 
+  int * x =NULL;
 	ptr[0] = 100;
 	ptr = arr;
+  int z = ptr[100];
 	ptr[0] = 100;
 	if (ptr == NULL) {
 		ptr = mymalloc(4);

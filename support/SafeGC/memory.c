@@ -60,6 +60,9 @@ typedef struct SegmentList
 	struct SegmentList *Next;
 } SegmentList;
 
+#define OBJ_HEADER_SIZE (sizeof(ObjHeader))
+
+
 typedef struct ObjHeader
 {
 	unsigned Size;
@@ -67,8 +70,11 @@ typedef struct ObjHeader
 	unsigned short Alignment;
 	ulong64 Type;
 } ObjHeader;
-
-#define OBJ_HEADER_SIZE (sizeof(ObjHeader))
+typedef struct Object
+{
+	ObjHeader * Header;
+	void * data;
+} Object;
 
 
 static SegmentList *Segments = NULL;
@@ -85,6 +91,100 @@ static void setBigAlloc(Segment *Seg, int BigAlloc) { Seg->Other.BigAlloc = BigA
 static int getBigAlloc(Segment *Seg) { return Seg->Other.BigAlloc; }
 //static void myfree(void *Ptr);
 static void checkAndRunGC();
+
+
+
+Segment * getSegment(ulong64 val){
+	SegmentList * iter = Segments;
+	 char * valx = ( char *)val;
+	Segment * desired = ADDR_TO_SEGMENT((void *)val);
+	while(iter){
+		if(iter->Segment == desired){
+			return desired;
+		}
+		iter =iter->Next;
+	}
+	return NULL;
+}
+
+Object  getObject(unsigned char * obj_ptr,Segment * seg){
+	Object object = {NULL,NULL};
+	char * Page = ADDR_TO_PAGE(obj_ptr);
+	if(seg->Other.BigAlloc){
+		ulong64 PageNo = (Page - (char*)seg)/ PAGE_SIZE;
+		while( PageNo >= 0 && PageNo< NUM_PAGES_IN_SEG && seg->Size[PageNo] != 1 ){
+			PageNo--;
+		}
+		if( PageNo >= 0 && PageNo < NUM_PAGES_IN_SEG && seg->Size[PageNo] == 1 && Page + OBJ_HEADER_SIZE == (char *)obj_ptr){
+			ObjHeader * Header = (ObjHeader *) Page;
+			object.data = Page + OBJ_HEADER_SIZE;
+			object.Header = Header;
+		}
+		return object;
+	}
+	char * iter = Page;
+	if(iter < seg->Other.DataPtr || iter >seg->Other.AllocPtr){
+		return object;
+	}
+	while(iter < Page + PAGE_SIZE){
+		ObjHeader * Header = (ObjHeader *) iter;
+		unsigned char * data = iter + OBJ_HEADER_SIZE;
+		if(obj_ptr < data + Header->Size - OBJ_HEADER_SIZE && obj_ptr>= data){
+			object.data = data;
+			object.Header = Header;
+			return object;
+		}
+		iter += Header->Size;
+	}
+	return object;
+}
+
+int isAddrOOB(void *base, void *accessed){
+
+  ulong64 val =  (ulong64)base;	
+  Segment * seg = getSegment(val);
+  if(!seg){
+    printf("The base pointer is not a valid object\n");
+    return 1;
+  }
+  Object obj = getObject((void *)val, seg);
+  if(!obj.Header || obj.Header->Status == FREE){
+    printf("The base pointer is not a valid object\n");
+    return 1;
+  }
+  char * base_ptr = (char *)obj.data;
+  int distance = ((char *)accessed) - base_ptr;
+  if(distance < 0 || distance >= obj.Header->Size - OBJ_HEADER_SIZE){
+    printf("Out of Bounds Pointer \n");
+    return 1;
+  }
+  return 0;
+  
+}
+
+int checkBounds(void *base, void *accessed, unsigned long long accessSize){
+
+  ulong64 val =  (ulong64)base;	
+  Segment * seg = getSegment(val);
+  if(!seg){
+    printf("The base pointer is not a valid object\n");
+    return 1;
+  }
+  Object obj = getObject((void *)val, seg);
+  if(!obj.Header || obj.Header->Status == FREE){
+    printf("The base pointer is not a valid object\n");
+    return 1;
+  }
+  char * base_ptr = (char *)obj.data;
+  unsigned long long  distance = ((char *)accessed) - base_ptr;
+  if(distance < 0 || distance + accessSize -1 >= obj.Header->Size - OBJ_HEADER_SIZE){
+    printf("Out of Bounds access\n");
+    return 1;
+  }
+  return 0;
+  
+}
+
 
 static void addToSegmentList(Segment *Seg)
 {
