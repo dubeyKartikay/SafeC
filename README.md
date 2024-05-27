@@ -1,13 +1,6 @@
-install cmake and ninja by running,
-sudo apt install cmake ninja-build
-git clone https://github.com/piyus/CSE601.git
-cd CSE601
-mkdir build
-cd build
-cp ../scripts/build.sh .
-sh build.sh
-ninja
-** it will take a while **
-** after the build completes **
-cd ../tests
-make
+# Project Overview
+
+The project is structured to cover the following requirements:
+- Null Checks in C: A Static Analysis + dynamic checks to disallow null pointer dereference
+- Conservative Garbage Collection for C: Implementing a conservative garbage collector for C.
+- Type and Spatial Safety in SafeC: Implementing spatial and type safety checks for C programs using LLVM.
