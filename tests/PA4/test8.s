@@ -1,5 +1,5 @@
 	.text
-	.file	"test2.c"
+	.file	"test8.c"
 	.globl	bar                     # -- Begin function bar
 	.p2align	4, 0x90
 	.type	bar,@function
@@ -10,8 +10,8 @@ bar:                                    # @bar
 	.cfi_def_cfa_offset 16
 	.cfi_offset %rbx, -16
 	movslq	%esi, %rax
-	leaq	(%rdi,%rax,8), %rbx
-	movl	$8, %edx
+	leaq	(%rdi,%rax,4), %rbx
+	movl	$4, %edx
 	movq	%rbx, %rsi
 	callq	checkBounds
 	testl	%eax, %eax
@@ -29,7 +29,7 @@ bar:                                    # @bar
 	retq
 .LBB0_2:
 	.cfi_def_cfa_offset 16
-	movq	$0, (%rbx)
+	movl	$0, (%rbx)
 	popq	%rbx
 	.cfi_def_cfa_offset 8
 	retq
@@ -129,133 +129,151 @@ main:                                   # @main
 # %bb.0:                                # %entry
 	pushq	%rbp
 	.cfi_def_cfa_offset 16
+	.cfi_offset %rbp, -16
+	movq	%rsp, %rbp
+	.cfi_def_cfa_register %rbp
 	pushq	%r15
-	.cfi_def_cfa_offset 24
 	pushq	%r14
-	.cfi_def_cfa_offset 32
 	pushq	%r13
-	.cfi_def_cfa_offset 40
 	pushq	%r12
-	.cfi_def_cfa_offset 48
 	pushq	%rbx
-	.cfi_def_cfa_offset 56
-	pushq	%rax
-	.cfi_def_cfa_offset 64
+	subq	$24, %rsp
 	.cfi_offset %rbx, -56
 	.cfi_offset %r12, -48
 	.cfi_offset %r13, -40
 	.cfi_offset %r14, -32
 	.cfi_offset %r15, -24
-	.cfi_offset %rbp, -16
-	movq	%rsi, %rbp
-	movl	%edi, %ebx
-	movl	$16, %edi
-	callq	mymalloc
-	movq	%rax, %r12
-	movl	$7, %esi
-	movq	%rax, %rdi
-	movl	$16, %edx
-	callq	mycast
-	cmpl	$3, %ebx
+	cmpl	$3, %edi
 	jne	.LBB2_1
 # %bb.2:                                # %if.end
-	movq	%rbp, %rdi
+	movq	%rsi, %rbx
+	movq	%rsi, %rdi
 	movl	$1, %esi
 	callq	readArgv
-	movl	%eax, %ebx
-	movq	%rbp, %rdi
+	movl	%eax, %r14d
+	movq	%rbx, %rdi
 	movl	$2, %esi
 	callq	readArgv
-	movl	%eax, %r15d
-	movq	%rsp, %r13
-	movl	%ebx, %edi
-	shlq	$2, %rdi
+	movl	%eax, %ebx
+	movq	%rsp, -48(%rbp)         # 8-byte Spill
+	movl	%r14d, %r15d
+	leaq	(,%r15,4), %rdi
 	callq	mymalloc
-	movq	%rax, %r14
+	movq	%rax, %r12
 	movq	%rax, %rdi
 	xorl	%esi, %esi
 	movl	$4, %edx
 	callq	mycast
-	movslq	%r15d, %rax
-	leaq	(%r14,%rax,4), %rbp
-	addq	$4, %rbp
-	movq	%r14, %rdi
-	movq	%rbp, %rsi
-	callq	isAddrOOB
-	testl	%eax, %eax
-	jne	.LBB2_10
-# %bb.3:
-	movl	$8, %edx
-	movq	%r12, %rdi
-	movq	%r12, %rsi
-	callq	checkBounds
-	testl	%eax, %eax
-	jne	.LBB2_10
-# %bb.4:
-	movq	%r12, %rdi
-	movq	%rbp, %rsi
-	callq	writeBarrier
-	testl	%eax, %eax
-	jne	.LBB2_10
-# %bb.5:
-	movq	%rbp, (%r12)
-	movq	%r12, %rdi
-	movq	%r12, %rsi
-	callq	isAddrOOB
-	testl	%eax, %eax
-	jne	.LBB2_10
-# %bb.6:
-	movq	%r12, %rdi
-	movl	%r15d, %esi
-	callq	foo
+	movq	%r15, -56(%rbp)         # 8-byte Spill
+	shlq	$4, %r15
+	movq	%rsp, %r13
+	subq	%r15, %r13
 	movq	%r13, %rsp
-	movq	%r14, %rdi
+	movslq	%r14d, %rdx
+	shlq	$4, %rdx
+	movq	%r13, %rdi
+	xorl	%esi, %esi
+	callq	memset
+	movslq	%ebx, %rbx
+	leaq	(%r12,%rbx,4), %r14
+	addq	$-20, %r14
+	movq	%r12, %rdi
 	movq	%r14, %rsi
 	callq	isAddrOOB
 	testl	%eax, %eax
-	jne	.LBB2_10
-# %bb.7:
-	movq	%r14, %rdi
-	callq	myfree
-	jmp	.LBB2_8
+	jne	.LBB2_15
+# %bb.3:
+	shlq	$4, %rbx
+	addq	%r13, %rbx
+	addq	$80, %rbx
+	movl	$8, %edx
+	movq	%r13, %rdi
+	movq	%rbx, %rsi
+	movq	%r15, %rcx
+	callq	checkBoundsStack
+	testl	%eax, %eax
+	jne	.LBB2_15
+# %bb.4:
+	movl	$3, %ecx
+	movq	%r13, %rdi
+	movq	%rbx, %rsi
+	movq	%r14, %rdx
+	callq	writeBarrierStack
+	testl	%eax, %eax
+	jne	.LBB2_15
+# %bb.5:
+	movq	%r14, (%rbx)
+	callq	rand
+	cltd
+	idivl	-56(%rbp)               # 4-byte Folded Reload
+	movslq	%edx, %rbx
+	shlq	$4, %rbx
+	addq	%r13, %rbx
+	movl	$8, %edx
+	movq	%r13, %rdi
+	movq	%rbx, %rsi
+	movq	%r15, %rcx
+	callq	checkBoundsStack
+	testl	%eax, %eax
+	je	.LBB2_6
+.LBB2_15:                               # %OOBcheck.failure
+	ud2
+                                        # implicit-def: $eax
+	jmp	.LBB2_14
 .LBB2_1:                                # %if.then
 	movl	$.Lstr, %edi
 	callq	puts
-.LBB2_8:                                # %return
+	xorl	%ebx, %ebx
+.LBB2_13:                               # %return
+	movl	%ebx, %eax
+.LBB2_14:                               # %return
+	leaq	-40(%rbp), %rsp
+	popq	%rbx
+	popq	%r12
+	popq	%r13
+	popq	%r14
+	popq	%r15
+	popq	%rbp
+	.cfi_def_cfa %rsp, 8
+	retq
+.LBB2_6:
+	.cfi_def_cfa %rbp, 16
+	cmpq	$0, (%rbx)
+	je	.LBB2_7
+# %bb.8:                                # %if.then10
+	movl	$8, %edx
+	movq	%r13, %rdi
+	movq	%r13, %rsi
+	movq	%r15, %rcx
+	callq	checkBoundsStack
+	testl	%eax, %eax
+	movq	-48(%rbp), %r14         # 8-byte Reload
+	jne	.LBB2_15
+# %bb.9:
+	movq	(%r13), %rbx
+	movl	$4, %edx
+	movq	%rbx, %rdi
+	movq	%rbx, %rsi
+	callq	checkBounds
+	testl	%eax, %eax
+	jne	.LBB2_15
+# %bb.10:
+	movl	(%rbx), %ebx
 	movq	%r12, %rdi
 	movq	%r12, %rsi
 	callq	isAddrOOB
 	testl	%eax, %eax
-	je	.LBB2_9
-.LBB2_10:                               # %OOBcheck.failure
-	ud2
-                                        # implicit-def: $ax
-                                        # implicit-def: $al
-                                        # implicit-def: $ah
-                                        # implicit-def: $eax
-                                        # implicit-def: $hax
-.LBB2_11:                               # %OOBcheck.failure
-	addq	$8, %rsp
-	.cfi_def_cfa_offset 56
-	popq	%rbx
-	.cfi_def_cfa_offset 48
-	popq	%r12
-	.cfi_def_cfa_offset 40
-	popq	%r13
-	.cfi_def_cfa_offset 32
-	popq	%r14
-	.cfi_def_cfa_offset 24
-	popq	%r15
-	.cfi_def_cfa_offset 16
-	popq	%rbp
-	.cfi_def_cfa_offset 8
-	retq
-.LBB2_9:
-	.cfi_def_cfa_offset 64
+	jne	.LBB2_15
+# %bb.11:
 	movq	%r12, %rdi
 	callq	myfree
-	xorl	%eax, %eax
-	jmp	.LBB2_11
+	jmp	.LBB2_12
+.LBB2_7:
+	xorl	%ebx, %ebx
+	movq	-48(%rbp), %r14         # 8-byte Reload
+.LBB2_12:                               # %cleanup
+	movq	%r14, %rsp
+	jmp	.LBB2_13
 .Lfunc_end2:
 	.size	main, .Lfunc_end2-main
 	.cfi_endproc

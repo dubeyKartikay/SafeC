@@ -12,5 +12,4 @@ void myfree(void *Ptr);
 void* GetAlignedAddr(void *Addr, size_t Alignment);
 int readArgv(const char *argv[], int idx);
 int isAddrOOB(void * base, void * accessed);
-
 #endif

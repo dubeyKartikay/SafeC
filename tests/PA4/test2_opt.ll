@@ -20,10 +20,20 @@ entry:
   br i1 %4, label %Boundcheck.failure, label %5
 
 5:                                                ; preds = %entry
+  %6 = bitcast i64* %arrayidx to i8*
+  %7 = call i32 @writeBarrier(i8* %6, i8* null)
+  %8 = icmp ne i32 %7, 0
+  br i1 %8, label %WriteBarrier.failure, label %9
+
+9:                                                ; preds = %5
   store i64 0, i64* %arrayidx, align 8, !tbaa !2
   ret void
 
 Boundcheck.failure:                               ; preds = %entry
+  call void @llvm.trap()
+  ret void
+
+WriteBarrier.failure:                             ; preds = %5
   call void @llvm.trap()
   ret void
 }
@@ -55,21 +65,27 @@ entry:
   br i1 %9, label %Boundcheck.failure1, label %10
 
 10:                                               ; preds = %4
+  %11 = bitcast i32* %arrayidx to i8*
+  %12 = call i32 @writeBarrier(i8* %11, i8* inttoptr (i32 20 to i8*))
+  %13 = icmp ne i32 %12, 0
+  br i1 %13, label %WriteBarrier.failure, label %14
+
+14:                                               ; preds = %10
   store i32 20, i32* %arrayidx, align 4, !tbaa !9
   %add = add nsw i32 %offset, 8
   %idxprom2 = sext i32 %add to i64
   %arrayidx3 = getelementptr inbounds i32, i32* %5, i64 %idxprom2
-  %11 = bitcast i32* %5 to i8*
-  %12 = bitcast i32* %arrayidx3 to i8*
-  %13 = call i32 @isAddrOOB(i8* %11, i8* %12)
-  %14 = icmp ne i32 %13, 0
-  br i1 %14, label %OOBcheck.failure, label %15
+  %15 = bitcast i32* %5 to i8*
+  %16 = bitcast i32* %arrayidx3 to i8*
+  %17 = call i32 @isAddrOOB(i8* %15, i8* %16)
+  %18 = icmp ne i32 %17, 0
+  br i1 %18, label %OOBcheck.failure, label %19
 
-15:                                               ; preds = %10
+19:                                               ; preds = %14
   tail call void @bar(i32* %arrayidx3, i32 %offset)
   ret void
 
-OOBcheck.failure:                                 ; preds = %10
+OOBcheck.failure:                                 ; preds = %14
   call void @llvm.trap()
   ret void
 
@@ -78,6 +94,10 @@ Boundcheck.failure:                               ; preds = %entry
   ret void
 
 Boundcheck.failure1:                              ; preds = %4
+  call void @llvm.trap()
+  ret void
+
+WriteBarrier.failure:                             ; preds = %10
   call void @llvm.trap()
   ret void
 }
@@ -113,7 +133,7 @@ if.end:                                           ; preds = %entry
   %10 = bitcast i32* %arrayidx to i8*
   %11 = call i32 @isAddrOOB(i8* %6, i8* %10)
   %12 = icmp ne i32 %11, 0
-  br i1 %12, label %OOBcheck.failure1, label %13
+  br i1 %12, label %OOBcheck.failure3, label %13
 
 13:                                               ; preds = %if.end
   %14 = bitcast i32** %arr to i8*
@@ -122,30 +142,61 @@ if.end:                                           ; preds = %entry
   br i1 %16, label %Boundcheck.failure, label %17
 
 17:                                               ; preds = %13
-  store i32* %arrayidx, i32** %arr, align 8, !tbaa !6
-  %18 = bitcast %struct.List* %1 to i8*
-  %19 = call i32 @isAddrOOB(i8* %0, i8* %18)
-  %20 = icmp ne i32 %19, 0
-  br i1 %20, label %OOBcheck.failure, label %21
+  %18 = bitcast i32** %arr to i8*
+  %19 = bitcast i32* %arrayidx to i8*
+  %20 = call i32 @writeBarrier(i8* %18, i8* %19)
+  %21 = icmp ne i32 %20, 0
+  br i1 %21, label %WriteBarrier.failure, label %22
 
-21:                                               ; preds = %17
+22:                                               ; preds = %17
+  store i32* %arrayidx, i32** %arr, align 8, !tbaa !6
+  %23 = bitcast %struct.List* %1 to i8*
+  %24 = call i32 @isAddrOOB(i8* %0, i8* %23)
+  %25 = icmp ne i32 %24, 0
+  br i1 %25, label %OOBcheck.failure, label %26
+
+26:                                               ; preds = %22
   call void @foo(%struct.List* nonnull %1, i32 %call2)
   call void @llvm.lifetime.end.p0i8(i64 16, i8* nonnull %9) #5
   call void @llvm.stackrestore(i8* %4)
+  %27 = call i32 @isAddrOOB(i8* %6, i8* %6)
+  %28 = icmp ne i32 %27, 0
+  br i1 %28, label %OOBcheck.failure1, label %29
+
+29:                                               ; preds = %26
+  %30 = call i8* @myfree(i8* %6)
   br label %return
 
-return:                                           ; preds = %21, %if.then
+return:                                           ; preds = %29, %if.then
+  %31 = call i32 @isAddrOOB(i8* %0, i8* %0)
+  %32 = icmp ne i32 %31, 0
+  br i1 %32, label %OOBcheck.failure2, label %33
+
+33:                                               ; preds = %return
+  %34 = call i8* @myfree(i8* %0)
   ret i32 0
 
-OOBcheck.failure:                                 ; preds = %17
+OOBcheck.failure:                                 ; preds = %22
   call void @llvm.trap()
   ret i32 undef
 
-OOBcheck.failure1:                                ; preds = %if.end
+OOBcheck.failure1:                                ; preds = %26
+  call void @llvm.trap()
+  ret i32 undef
+
+OOBcheck.failure2:                                ; preds = %return
+  call void @llvm.trap()
+  ret i32 undef
+
+OOBcheck.failure3:                                ; preds = %if.end
   call void @llvm.trap()
   ret i32 undef
 
 Boundcheck.failure:                               ; preds = %13
+  call void @llvm.trap()
+  ret i32 undef
+
+WriteBarrier.failure:                             ; preds = %17
   call void @llvm.trap()
   ret i32 undef
 }
@@ -166,9 +217,13 @@ declare i32 @checkBounds(i8*, i8*, i64)
 ; Function Attrs: cold noreturn nounwind
 declare void @llvm.trap() #7
 
+declare i32 @writeBarrier(i8*, i8*)
+
 declare i32 @isAddrOOB(i8*, i8*)
 
 declare i8* @mymalloc(i64)
+
+declare i8* @myfree(i8*)
 
 declare %struct.List* @mycast(i8*, i64, i32)
 
@@ -185,7 +240,7 @@ attributes #7 = { cold noreturn nounwind }
 !llvm.ident = !{!1}
 
 !0 = !{i32 1, !"wchar_size", i32 4}
-!1 = !{!"clang version 10.0.0 (https://github.com/Systems-IIITD/CSE601.git 49d077240ba88639d805c42031ba63ca38f025b6)"}
+!1 = !{!"clang version 10.0.0 (https://github.com/Systems-IIITD/CSE601.git 23fd0cc59a32d9b8e1837ee26b6a88eeea825a95)"}
 !2 = !{!3, !3, i64 0}
 !3 = !{!"long long", !4, i64 0}
 !4 = !{!"omnipotent char", !5, i64 0}

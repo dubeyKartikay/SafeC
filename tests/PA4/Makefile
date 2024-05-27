@@ -42,6 +42,31 @@ two:test2.c dummy
 	$(CLANG) -g -O3 -L$(SAFEGC) -Wl,-rpath=$(SAFEGC) -o $@ test2.s -lmemory
 
 
+five:test5.c dummy
+	$(CLANG) -I$(SAFEGC) -O3 -c -emit-llvm $<
+	$(DIS) test5.bc
+	$(OPT) -load $(SLIB) -f -memsafe -o test5.bc < test5.bc
+	$(OPT) -load $(SLIB) -f -typeassigner -o test5.bc < test5.bc
+	$(DIS) -o test5_opt.ll test5.bc
+	$(LLC) test5.bc -o test5.s
+	$(CLANG) -g  -L$(SAFEGC) -Wl,-rpath=$(SAFEGC) -o $@ test5.s -lmemory
+
+six:test6.c dummy
+	$(CLANG) -I$(SAFEGC) -O3 -c -emit-llvm $<
+	$(DIS) test6.bc
+	$(OPT) -load $(SLIB) -f -memsafe -o test6.bc < test6.bc
+	$(OPT) -load $(SLIB) -f -typeassigner -o test6.bc < test6.bc
+	$(DIS) -o test6_opt.ll test6.bc
+	$(LLC) test6.bc -o test6.s
+	$(CLANG) -g  -L$(SAFEGC) -Wl,-rpath=$(SAFEGC) -o $@ test6.s -lmemory
+four:test4.c dummy
+	$(CLANG) -I$(SAFEGC) -O3 -c -emit-llvm $<
+	$(DIS) test4.bc
+	$(OPT) -load $(SLIB) -f -memsafe -o test4.bc < test4.bc
+	$(OPT) -load $(SLIB) -f -typeassigner -o test4.bc < test4.bc
+	$(DIS) -o test4_opt.ll test4.bc
+	$(LLC) test4.bc -o test4.s
+	$(CLANG) -g -O3  -L$(SAFEGC) -Wl,-rpath=$(SAFEGC) -o $@ test4.s -lmemory
 run1:
 	./test1 20 2
 	./test1 20 5

@@ -24,6 +24,6 @@ int main(int argc, const char *argv[])
 	a.fld5 = mymalloc(4);
 	a.fld6 = mymalloc(4);
 	char *arr = (char*)&a.fld2;
-	arr[offset] = 0;
+	arr[offset] = 1;
 	return a.fld1 == a.fld5;
 }
